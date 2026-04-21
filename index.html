@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus OS</title>
-    <link rel="icon" type="image/x-icon" href="https://www.rw-designer.com/icon-image/18758-256x256x32.png">
     <!-- Suppress Tailwind Production Warning -->
     <script>
         const originalWarn = console.warn;
@@ -242,7 +241,18 @@
 
     <!-- LOGIN SCREEN -->
     <div id="login-screen">
-        <div id="login-view" class="login-card">
+        
+        <!-- User List View (Default View) -->
+        <div id="user-list-view" class="login-card" style="display: flex; background: rgba(0,0,0,0.6); padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); min-width: 450px;">
+            <h2 class="text-3xl mb-8 font-light text-white text-shadow-md">Select User</h2>
+            <div id="user-list-container" class="flex flex-wrap justify-center gap-6 mb-8 w-full max-h-[300px] overflow-y-auto">
+                <!-- User items injected here -->
+            </div>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-full font-bold shadow transition-colors" onclick="OS.UI.toggleAuthView('register')">Create New Account</button>
+        </div>
+
+        <!-- Login Password View -->
+        <div id="login-view" class="login-card" style="display: none; background: rgba(0,0,0,0.6); padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px);">
             <div id="login-avatar" class="user-avatar-login"><i class="fas fa-user"></i></div>
             <h2 id="login-username-display" class="text-3xl mb-4 font-light text-white text-shadow-md">User</h2>
             <div class="login-input-container">
@@ -253,9 +263,12 @@
                 <input type="checkbox" id="login-remember" class="cursor-pointer">
                 <label for="login-remember" class="text-sm cursor-pointer text-gray-200">Remember Me</label>
             </div>
-            <div class="mt-8 text-sm text-blue-200 cursor-pointer hover:text-white" onclick="OS.UI.toggleAuthView('register')">Switch User / Create Account</div>
+            <div class="mt-8 text-sm text-blue-200 cursor-pointer hover:text-white flex items-center gap-1" onclick="OS.UI.toggleAuthView('userList')">
+                <i class="fas fa-arrow-left"></i> Back to Users
+            </div>
         </div>
         
+        <!-- Register View -->
         <div id="register-view" class="login-card" style="display: none; background: rgba(0,0,0,0.6); padding: 30px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px);">
             <h2 class="text-2xl mb-4 font-light">Create Account</h2>
             
@@ -269,12 +282,7 @@
             <input type="password" id="reg-password" class="login-input mb-4 w-full p-2" placeholder="Password">
             
             <button class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded font-bold" onclick="OS.Auth.register()">Create</button>
-            <div class="mt-4 text-sm text-blue-200 cursor-pointer hover:text-white" onclick="OS.UI.toggleAuthView('login')">Cancel</div>
-            
-            <div id="existing-users" class="mt-4 text-left border-t border-gray-500 pt-3 hidden w-full">
-                <p class="text-xs text-gray-400 mb-2">Select User:</p>
-                <div id="user-list-container" class="flex flex-wrap gap-2"></div>
-            </div>
+            <div class="mt-4 text-sm text-blue-200 cursor-pointer hover:text-white" onclick="OS.UI.toggleAuthView('userList')">Cancel</div>
         </div>
     </div>
 
@@ -396,6 +404,13 @@
                     gain.gain.setValueAtTime(0.3, ctx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
                     osc.start(); osc.stop(ctx.currentTime + 0.2);
+                } else if (type === 'blip') {
+                    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                    osc.start(); osc.stop(ctx.currentTime + 0.1);
                 }
             } catch(e) { console.log('Audio disabled'); }
         }
@@ -440,7 +455,7 @@
         registry: { 
             'explorer': { id: 'explorer', name: 'File Explorer', icon: 'fas fa-folder-open', color: '#ffb300', system: true, handler: 'renderExplorer' },
             'browser': { id: 'browser', name: 'Web Browser', icon: 'fab fa-chrome', color: '#4285f4', system: true, handler: 'renderBrowser' },
-            'aichat': { id: 'aichat', name: 'Nexus AI Chat', icon: 'fas fa-circle', color: 'var(--ai-color)', system: true, handler: 'renderAIChat' },
+            'aichat': { id: 'aichat', name: 'Nexus AI Chat', icon: 'fas fa-comment-dots', color: '#9c27b0', system: true, handler: 'renderAIChat' },
             'settings': { id: 'settings', name: 'Control Panel', icon: 'fas fa-cog', color: '#607d8b', system: true, handler: 'renderSettings' },
             'camera': { id: 'camera', name: 'Camera', icon: 'fas fa-camera', color: '#333', system: true, handler: 'renderCamera' },
             'screenrec': { id: 'screenrec', name: 'Screen Recorder', icon: 'fas fa-record-vinyl', color: '#ff5722', system: true, handler: 'renderScreenRecorder' },
@@ -518,7 +533,7 @@
             });
 
             await OS.UI.showModal({type: 'alert', title: 'Success', text: 'Account created. Please log in.'});
-            this.pendingAvatar = null; OS.UI.toggleAuthView('login'); OS.UI.populateUserList();
+            this.pendingAvatar = null; OS.UI.toggleAuthView('userList'); OS.UI.populateUserList();
         },
         async login() {
             const user = document.getElementById('login-username-display').innerText;
@@ -577,23 +592,25 @@
             document.getElementById('sys-date').innerText = now.toLocaleDateString();
         },
         toggleAuthView(view) {
+            document.getElementById('user-list-view').style.display = view === 'userList' ? 'flex' : 'none';
             document.getElementById('login-view').style.display = view === 'login' ? 'flex' : 'none';
             document.getElementById('register-view').style.display = view === 'register' ? 'block' : 'none';
         },
         async populateUserList() {
             const users = await NexusDB.getAll('users');
             const container = document.getElementById('user-list-container');
-            const existingDiv = document.getElementById('existing-users');
-            if (users.length === 0) { existingDiv.classList.add('hidden'); this.toggleAuthView('register'); return; }
-            existingDiv.classList.remove('hidden'); container.innerHTML = '';
+            
+            if (users.length === 0) { this.toggleAuthView('register'); return; }
+            
+            this.toggleAuthView('userList');
+            container.innerHTML = '';
             users.forEach(u => {
                 const btn = document.createElement('div');
-                btn.className = 'bg-gray-800 hover:bg-gray-700 p-2 rounded cursor-pointer flex items-center gap-2 border border-gray-600';
-                btn.innerHTML = u.avatar ? `<img src="${u.avatar}" class="w-8 h-8 rounded-full object-cover"> <span class="text-white text-sm">${u.username}</span>` : `<i class="fas fa-user text-white"></i> <span class="text-white text-sm">${u.username}</span>`;
+                btn.className = 'flex flex-col items-center gap-2 cursor-pointer hover:bg-white/10 p-4 rounded-lg transition-colors';
+                btn.innerHTML = u.avatar ? `<img src="${u.avatar}" class="w-20 h-20 rounded-full object-cover border-2 border-white/50 shadow-lg"> <span class="text-white font-semibold text-lg drop-shadow-md">${u.username}</span>` : `<div class="w-20 h-20 rounded-full bg-gray-600 border-2 border-white/50 shadow-lg flex items-center justify-center text-3xl"><i class="fas fa-user text-white"></i></div> <span class="text-white font-semibold text-lg drop-shadow-md">${u.username}</span>`;
                 btn.onclick = () => { this.toggleAuthView('login'); OS.Auth.selectUserForLogin(u); };
                 container.appendChild(btn);
             });
-            if (users.length > 0 && document.getElementById('login-username-display').innerText === "User") OS.Auth.selectUserForLogin(users[0]);
         },
         
         showModal(options) {
@@ -1392,7 +1409,7 @@
                 <div class="flex flex-col h-full bg-white">
                     <div id="${winId}_chat" class="flex-1 overflow-y-auto p-4 space-y-4">
                         <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white shadow" style="background: radial-gradient(circle at 30% 30%, #fff, var(--ai-color));"></div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white shadow" style="background-color: var(--ai-color);"><i class="fas fa-robot text-black"></i></div>
                             <div class="bg-gray-100 p-3 rounded-lg shadow-sm text-sm border border-gray-300 text-black">Hello! I am ${OS.state.aiName}, powered by Gemini 2.5 Flash Lite. You can ask me anything or command me to open apps!</div>
                         </div>
                     </div>
@@ -1425,7 +1442,7 @@
             const replyId = 'reply_' + Utils.generateId();
             chatBox.innerHTML += `
                 <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white shadow" style="background: radial-gradient(circle at 30% 30%, #fff, var(--ai-color));"></div>
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white shadow" style="background-color: var(--ai-color);"><i class="fas fa-robot text-black"></i></div>
                     <div id="${replyId}" class="bg-gray-100 p-3 rounded-lg shadow-sm text-sm border border-gray-300 text-black min-w-[50px] min-h-[40px] italic text-gray-500">Thinking...</div>
                 </div>
             `;
@@ -1455,7 +1472,7 @@
             const chatBox = document.getElementById(`${winId}_chat`);
             chatBox.innerHTML += `
                 <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white shadow" style="background: radial-gradient(circle at 30% 30%, #fff, var(--ai-color));"></div>
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white shadow" style="background-color: var(--ai-color);"><i class="fas fa-robot text-black"></i></div>
                     <div class="bg-gray-100 p-3 rounded-lg shadow-sm text-sm border border-gray-300 text-black">${text.replace(/\n/g, '<br>')}</div>
                 </div>
             `;
@@ -1624,18 +1641,32 @@
 
                         <div id="${winId}_v_account" class="settings-view" style="display:none;">
                             <h3 class="font-light text-2xl mb-4 border-b border-gray-300 pb-2">Account Settings</h3>
-                            <div class="flex gap-6 items-start">
+                            <div class="flex gap-6 items-start mb-6">
                                 <div class="flex flex-col items-center">
                                     <div id="${winId}_acc_avatar" class="w-24 h-24 bg-gray-200 border-2 border-gray-400 rounded flex items-center justify-center text-4xl text-gray-500 mb-2 overflow-hidden bg-cover bg-center"><i class="fas fa-user"></i></div>
                                     <button class="bg-gray-200 hover:bg-gray-300 px-3 py-1 text-xs rounded border border-gray-400" onclick="document.getElementById('${winId}_acc_file').click()">Change Avatar</button>
                                     <input type="file" id="${winId}_acc_file" accept="image/*" style="display:none" onchange="OS.Apps._changeAccountAvatar(this, '${winId}')">
                                 </div>
-                                <div class="flex-1">
-                                    <p class="font-bold text-lg mb-4">User: ${OS.state.user}</p>
-                                    <label class="text-sm font-bold block mb-1">New Password</label>
-                                    <input type="password" id="${winId}_acc_pass" class="border p-2 rounded w-full mb-2">
-                                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm shadow" onclick="OS.Apps._changeAccountPassword('${winId}')">Update Password</button>
+                                <div class="flex-1 flex flex-col gap-3">
+                                    <div>
+                                        <label class="text-sm font-bold block mb-1">Display Name</label>
+                                        <div class="flex gap-2">
+                                            <input type="text" id="${winId}_acc_name" class="border p-2 rounded w-full flex-1" value="${OS.state.user}">
+                                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm shadow whitespace-nowrap" onclick="OS.Apps._changeAccountName('${winId}')">Rename</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-bold block mb-1">New Password</label>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="${winId}_acc_pass" class="border p-2 rounded w-full flex-1">
+                                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm shadow whitespace-nowrap" onclick="OS.Apps._changeAccountPassword('${winId}')">Update Password</button>
+                                        </div>
+                                    </div>
                                 </div>
+                            </div>
+                            <div class="border-t border-gray-300 pt-4 mt-auto">
+                                <h4 class="font-bold text-red-600 mb-2">Danger Zone</h4>
+                                <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm shadow" onclick="OS.Apps._deleteAccount('${winId}')">Delete Account</button>
                             </div>
                         </div>
 
@@ -1676,6 +1707,68 @@
             event.target.classList.add('bg-blue-100', 'text-blue-800'); event.target.classList.remove('hover:bg-gray-200', 'text-gray-800');
             document.querySelectorAll(`#${winId} .settings-view`).forEach(v => v.style.display = 'none');
             document.getElementById(`${winId}_v_${view}`).style.display = 'block';
+        },
+        async _changeAccountName(winId) {
+            const newName = document.getElementById(`${winId}_acc_name`).value.trim();
+            if(!newName || newName === OS.state.user) return;
+            
+            const existing = await NexusDB.get('users', newName);
+            if(existing) { await OS.UI.showModal({type: 'alert', title: 'Error', text: 'Username already taken.'}); return; }
+            
+            const conf = await OS.UI.showModal({type: 'confirm', title: 'Rename Account', text: `Are you sure you want to rename your account to ${newName}? The OS will restart to apply changes.`});
+            if(!conf) return;
+
+            const oldName = OS.state.user;
+            
+            const user = await NexusDB.get('users', oldName);
+            user.username = newName;
+            await NexusDB.put('users', user);
+            await NexusDB.delete('users', oldName);
+            
+            const settings = await NexusDB.get('settings', oldName);
+            if(settings) {
+                settings.username = newName;
+                await NexusDB.put('settings', settings);
+                await NexusDB.delete('settings', oldName);
+            }
+            
+            const apps = await NexusDB.getAll('apps');
+            for(let app of apps) {
+                if(app.owner === oldName) {
+                    app.owner = newName;
+                    await NexusDB.put('apps', app);
+                }
+            }
+            
+            const files = await NexusDB.getAll('files');
+            for(let f of files) {
+                if(f.owner === oldName) {
+                    const oldPath = f.path;
+                    f.owner = newName;
+                    f.path = f.path.replace(`/Users/${oldName}`, `/Users/${newName}`);
+                    f.parent = f.parent.replace(`/Users/${oldName}`, `/Users/${newName}`);
+                    await NexusDB.put('files', f);
+                    await NexusDB.delete('files', oldPath);
+                }
+            }
+            
+            OS.Auth.logout();
+        },
+        async _deleteAccount(winId) {
+            const conf1 = await OS.UI.showModal({type: 'confirm', title: 'Delete Account', text: 'Are you sure you want to completely delete this account? All files, apps, and settings will be permanently lost!'});
+            if(!conf1) return;
+            
+            const oldName = OS.state.user;
+            await NexusDB.delete('users', oldName);
+            await NexusDB.delete('settings', oldName);
+            
+            const apps = await NexusDB.getAll('apps');
+            for(let app of apps) { if(app.owner === oldName) await NexusDB.delete('apps', app.id); }
+            
+            const files = await NexusDB.getAll('files');
+            for(let f of files) { if(f.owner === oldName) await NexusDB.delete('files', f.path); }
+            
+            OS.Auth.logout();
         },
         async _saveAISettings(winId) {
             const name = document.getElementById(`${winId}_ai_name`).value.trim() || 'Nexus';
@@ -1807,14 +1900,19 @@
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
                 this.recognition = new SpeechRec(); this.recognition.continuous = false;
-                this.recognition.onstart = () => { this.isListening = true; document.getElementById('ai-container').classList.add('ai-listening'); Utils.playAudio('startup'); };
+                this.recognition.onstart = () => { this.isListening = true; document.getElementById('ai-container').classList.add('ai-listening'); Utils.playAudio('blip'); };
                 this.recognition.onresult = (e) => this.processCommand(e.results[0][0].transcript);
-                this.recognition.onerror = () => this.stopListening();
+                this.recognition.onerror = (e) => { 
+                    if(e.error === 'not-allowed') {
+                        OS.UI.showModal({type: 'alert', title: 'Mic Blocked', text: 'Microphone access is blocked in this environment. Please allow microphone permissions or open in a full tab.'});
+                    }
+                    this.stopListening(); 
+                };
                 this.recognition.onend = () => this.stopListening();
             }
         },
         toggleListen() {
-            if(!this.recognition) return OS.notify("AI Error", "Speech Recognition not supported in this browser.");
+            if(!this.recognition) return OS.UI.showModal({type: 'alert', title: 'Error', text: 'Speech Recognition not supported in this browser.'});
             this.isListening ? this.recognition.stop() : this.recognition.start();
         },
         stopListening() { this.isListening = false; document.getElementById('ai-container').classList.remove('ai-listening'); },
