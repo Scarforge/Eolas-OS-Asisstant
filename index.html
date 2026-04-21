@@ -16,8 +16,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Puter.js Integration for AI -->
-    <script src="https://js.puter.com/v2/"></script>
+    <!-- UncloseAI Integration -->
+    <script>
+        // Disable built-in styling to use your own CSS framework
+        window.UNCLOSEAI_CUSTOM_STYLING = false;
+
+        // Hide the floating button (use the JS API instead)
+        window.UNCLOSEAI_FLOATING_BUTTON = false;
+    </script>
+    <script src="https://uncloseai.com/uncloseai.js" type="module"></script>
     
     <style>
         /* === CORE OS VARIABLES & RESET === */
@@ -1459,18 +1466,12 @@
             const replyElem = document.getElementById(replyId);
 
             try {
-                if (typeof puter === 'undefined') throw new Error('Puter.js not loaded');
-                const flash_resp = await puter.ai.chat(`Keep your answer to two sentences. You are ${OS.state.aiName}. ${text}`, {model: 'gemini-2.5-flash-lite', stream: true});
-                replyElem.classList.remove('italic', 'text-gray-500'); replyElem.innerHTML = '';
+                const systemPrompt = `You are ${OS.state.aiName}, a helpful AI assistant for Nexus OS. Keep your answer to two sentences.`;
+                const responseText = await OS.AI.generateText(text, systemPrompt);
                 
-                let fullText = '';
-                for await (const part of flash_resp) {
-                    if (part?.text) {
-                        fullText += part.text;
-                        replyElem.innerHTML = Utils.escapeHTML(fullText).replaceAll('\n', '<br>');
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }
-                }
+                replyElem.classList.remove('italic', 'text-gray-500'); 
+                replyElem.innerHTML = Utils.escapeHTML(responseText).replaceAll('\n', '<br>');
+                chatBox.scrollTop = chatBox.scrollHeight;
             } catch(e) {
                 console.error(e);
                 replyElem.classList.remove('italic', 'text-gray-500');
@@ -1905,6 +1906,33 @@
     // --- 8. AI VOICE SYSTEM ---
     OS.AI = {
         isListening: false, recognition: null, synth: window.speechSynthesis,
+        async generateText(prompt, systemPrompt) {
+            const apiKey = ""; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+            if (systemPrompt) payload.systemInstruction = { parts: [{ text: systemPrompt }] };
+
+            let retries = 5;
+            let delay = 1000;
+            
+            while (retries > 0) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response.";
+                } catch (e) {
+                    retries--;
+                    if (retries === 0) throw e;
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+        },
         init() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1936,17 +1964,20 @@
             else if (lower.includes('explorer')) { OS.WM.openApp('explorer'); this.speak("Opening files."); }
             else if (lower.includes('settings')) { OS.WM.openApp('settings'); this.speak("Opening settings."); }
             else if (lower.includes('shut down') || lower.includes('log out')) { this.speak("Logging off."); setTimeout(() => OS.Auth.logout(), 1000); }
-            else { this.queryPuter(text); }
+            else { this.queryAI(text); }
         },
-        async queryPuter(text) {
+        async queryAI(text) {
              this.speak("Thinking...");
              try {
-                  if (typeof puter === 'undefined') throw new Error('Puter.js not loaded');
-                  const resp = await puter.ai.chat(`Keep your answer to two sentences. You are ${OS.state.aiName}. ${text}`, {model: 'gemini-2.5-flash-lite'});
-                  let msg = typeof resp === 'string' ? resp : (resp.text || resp.message?.content || "I have an answer, but I can't read it out loud.");
-                  msg = msg.replace(/\*/g, '').replace(/#/g, '');
-                  this.speak(msg.substring(0, 250)); OS.notify(`${OS.state.aiName} AI`, msg, 'fas fa-robot');
-             } catch(e) { this.speak("I'm sorry, I couldn't reach the AI server right now."); }
+                  const systemPrompt = `You are ${OS.state.aiName}, a helpful AI assistant for Nexus OS. Keep your answer to two sentences.`;
+                  const responseText = await this.generateText(text, systemPrompt);
+                  let msg = responseText.replace(/\*/g, '').replace(/#/g, '');
+                  this.speak(msg.substring(0, 250)); 
+                  OS.notify(`${OS.state.aiName} AI`, msg, 'fas fa-robot');
+             } catch(e) { 
+                 console.error(e);
+                 this.speak("I'm sorry, I couldn't reach the AI server right now."); 
+             }
         }
     };
 
