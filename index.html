@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus OS</title>
+    <link rel="icon" type="image/x-icon" href="https://www.rw-designer.com/icon-image/18758-256x256x32.png">
     <!-- Suppress Tailwind Production Warning -->
     <script>
         const originalWarn = console.warn;
@@ -157,18 +158,17 @@
         .login-submit-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #0078d7; border-radius: 4px; border: 1px solid #005a9e; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
         .login-submit-btn:hover { background: #005a9e; }
 
-        /* === 3D AI SPHERE (Fixed Clipping) === */
-        #ai-container { position: absolute; bottom: 60px; right: 20px; width: 160px; height: 160px; z-index: 500; cursor: pointer; display: none; }
-        .ai-sphere { width: 100px; height: 100px; position: absolute; left: 50%; top: 50%; margin-left: -50px; margin-top: -50px; transform-style: preserve-3d; animation: floatSphere 4s ease-in-out infinite; pointer-events: none;}
-        .ai-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(var(--ai-color-rgb), 0.6); box-shadow: inset 0 0 15px rgba(var(--ai-color-rgb), 0.8); transition: border-color 0.3s, box-shadow 0.3s;}
+        /* === 3D AI SPHERE (Dynamic Custom Colors) === */
+        #ai-container { position: absolute; bottom: 60px; right: 20px; width: 120px; height: 120px; z-index: 500; cursor: pointer; perspective: 800px; display: none; }
+        .ai-sphere { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; animation: floatSphere 4s ease-in-out infinite; }
+        .ai-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(var(--ai-color-rgb), 0.6); box-shadow: 0 0 15px rgba(var(--ai-color-rgb), 0.8), inset 0 0 15px rgba(var(--ai-color-rgb), 0.8); transition: border-color 0.3s, box-shadow 0.3s;}
         .ring1 { animation: spin1 4s linear infinite; }
         .ring2 { animation: spin2 5s linear infinite; }
         .ring3 { animation: spin3 6s linear infinite; }
+        .ai-core { position: absolute; top: 25%; left: 25%; width: 50%; height: 50%; background: radial-gradient(circle, #fff, var(--ai-color)); border-radius: 50%; box-shadow: 0 0 30px var(--ai-color); animation: pulseCore 2s infinite alternate; transition: background 0.3s, box-shadow 0.3s;}
         
-        .ai-core { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin-left: -25px; margin-top: -25px; background: radial-gradient(circle, #fff, var(--ai-color)); border-radius: 50%; box-shadow: 0 0 40px 10px var(--ai-color); animation: pulseCore 2s infinite alternate, floatSphere 4s ease-in-out infinite; transition: background 0.3s, box-shadow 0.3s; pointer-events: none;}
-        
-        .ai-listening .ai-ring { border-color: rgba(255, 0, 255, 0.8); box-shadow: inset 0 0 20px rgba(255, 0, 255, 0.9); }
-        .ai-listening .ai-core { background: radial-gradient(circle, #fff, #ff00ff); box-shadow: 0 0 50px 15px #ff00ff; animation: pulseCoreFast 0.5s infinite alternate, floatSphere 4s ease-in-out infinite; }
+        .ai-listening .ai-ring { border-color: rgba(255, 0, 255, 0.8); box-shadow: 0 0 20px rgba(255, 0, 255, 0.9); }
+        .ai-listening .ai-core { background: radial-gradient(circle, #fff, #ff00ff); box-shadow: 0 0 40px #ff00ff; animation: pulseCoreFast 0.5s infinite alternate; }
 
         @keyframes floatSphere { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
         @keyframes spin1 { 0% { transform: rotateX(60deg) rotateY(0deg) rotateZ(0deg); } 100% { transform: rotateX(60deg) rotateY(360deg) rotateZ(360deg); } }
@@ -570,7 +570,7 @@
             }
             
             document.getElementById('taskbar').style.display = 'flex'; 
-            Utils.playAudio('startup'); await OS.UI.loadDesktop();
+            Utils.playAudio('startup'); await OS.UI.loadDesktop(); document.getElementById('ai-container').style.display = 'block';
         },
         logout() {
             localStorage.removeItem('nexus_session'); OS.state.user = null;
@@ -595,6 +595,15 @@
             document.getElementById('user-list-view').style.display = view === 'userList' ? 'flex' : 'none';
             document.getElementById('login-view').style.display = view === 'login' ? 'flex' : 'none';
             document.getElementById('register-view').style.display = view === 'register' ? 'block' : 'none';
+
+            if (view === 'register') {
+                document.getElementById('reg-username').value = '';
+                document.getElementById('reg-password').value = '';
+                document.getElementById('reg-avatar-input').value = '';
+                document.getElementById('reg-avatar-preview').style.backgroundImage = '';
+                document.getElementById('reg-avatar-preview').innerHTML = '<i class="fas fa-camera"></i>';
+                OS.Auth.pendingAvatar = null;
+            }
         },
         async populateUserList() {
             const users = await NexusDB.getAll('users');
@@ -1410,7 +1419,7 @@
                     <div id="${winId}_chat" class="flex-1 overflow-y-auto p-4 space-y-4">
                         <div class="flex items-start gap-3">
                             <div class="w-8 h-8 rounded-full flex items-center justify-center text-white shadow" style="background-color: var(--ai-color);"><i class="fas fa-robot text-black"></i></div>
-                            <div class="bg-gray-100 p-3 rounded-lg shadow-sm text-sm border border-gray-300 text-black">Hello! I am ${OS.state.aiName}, powered by Gemini 2.5 Flash Lite. You can ask me anything or command me to open apps!</div>
+                            <div class="bg-gray-100 p-3 rounded-lg shadow-sm text-sm border border-gray-300 text-black">Hello! I am ${OS.state.aiName}. You can ask me anything or command me to open apps!</div>
                         </div>
                     </div>
                     <div class="p-3 bg-gray-200 border-t border-gray-400 flex gap-2">
