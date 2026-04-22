@@ -16,9 +16,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Puter.js Integration for AI -->
-    <script src="https://js.puter.com/v2/"></script>
-    
     <style>
         /* === CORE OS VARIABLES & RESET === */
         :root {
@@ -1458,20 +1455,7 @@
             chatBox.scrollTop = chatBox.scrollHeight;
             const replyElem = document.getElementById(replyId);
 
-            try {
-                if (typeof puter === 'undefined') throw new Error('Puter.js not loaded');
-                const flash_resp = await puter.ai.chat(`Keep your answer to two sentences. You are ${OS.state.aiName}. ${text}`, {model: 'gemini-2.5-flash-lite', stream: true});
-                replyElem.classList.remove('italic', 'text-gray-500'); replyElem.innerHTML = '';
-                
-                let fullText = '';
-                for await (const part of flash_resp) {
-                    if (part?.text) {
-                        fullText += part.text;
-                        replyElem.innerHTML = Utils.escapeHTML(fullText).replaceAll('\n', '<br>');
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }
-                }
-            } catch(e) {
+            catch(e) {
                 console.error(e);
                 replyElem.classList.remove('italic', 'text-gray-500');
                 replyElem.innerHTML = "I am currently unable to reach the neural net API.";
@@ -1929,26 +1913,6 @@
             if(!this.synth) return;
             const u = new SpeechSynthesisUtterance(text); u.pitch = 1.1; u.rate = 1.0; this.synth.speak(u);
         },
-        async processCommand(text) {
-            OS.notify('Heard Command', `"${text}"`, 'fas fa-microphone');
-            const lower = text.toLowerCase();
-            if (lower.includes('browser')) { OS.WM.openApp('browser'); this.speak("Opening browser."); }
-            else if (lower.includes('explorer')) { OS.WM.openApp('explorer'); this.speak("Opening files."); }
-            else if (lower.includes('settings')) { OS.WM.openApp('settings'); this.speak("Opening settings."); }
-            else if (lower.includes('shut down') || lower.includes('log out')) { this.speak("Logging off."); setTimeout(() => OS.Auth.logout(), 1000); }
-            else { this.queryPuter(text); }
-        },
-        async queryPuter(text) {
-             this.speak("Thinking...");
-             try {
-                  if (typeof puter === 'undefined') throw new Error('Puter.js not loaded');
-                  const resp = await puter.ai.chat(`Keep your answer to two sentences. You are ${OS.state.aiName}. ${text}`, {model: 'gemini-2.5-flash-lite'});
-                  let msg = typeof resp === 'string' ? resp : (resp.text || resp.message?.content || "I have an answer, but I can't read it out loud.");
-                  msg = msg.replace(/\*/g, '').replace(/#/g, '');
-                  this.speak(msg.substring(0, 250)); OS.notify(`${OS.state.aiName} AI`, msg, 'fas fa-robot');
-             } catch(e) { this.speak("I'm sorry, I couldn't reach the AI server right now."); }
-        }
-    };
 
     window.onload = () => { OS.init(); OS.AI.init(); };
 
